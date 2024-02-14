@@ -1,7 +1,7 @@
 _base_ = ["../_base_/default_runtime.py"]
 
 # misc custom setting
-batch_size = 12  # bs: total bs in all gpus
+batch_size = 8  # bs: total bs in all gpus -- original: 12
 num_worker = 24
 mix_prob = 0.8
 empty_cache = False
@@ -66,7 +66,7 @@ param_dicts = [dict(keyword="block", lr=0.0006)]
 
 # dataset settings
 dataset_type = "ScanNetDataset"
-data_root = "autodl-tmp/datasets/scannet"
+data_root = "data/scannet"
 
 data = dict(
     num_classes=20,
