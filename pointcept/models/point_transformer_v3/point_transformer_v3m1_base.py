@@ -247,6 +247,157 @@ class MLP(nn.Module):
         x = self.drop(x)
         return x
 
+class ParallelBlockV1(PointModule):
+    def __init__(
+        self,
+        channels,
+        num_heads,
+        patch_size=48,
+        mlp_ratio=4.0,
+        qkv_bias=True,
+        qk_scale=None,
+        attn_drop=0.0,
+        proj_drop=0.0,
+        drop_path=0.0,
+        norm_layer=nn.LayerNorm,
+        act_layer=nn.GELU,
+        pre_norm=True,
+        cpe_indice_key=None,
+        enable_rpe=False,
+        enable_flash=True,
+        upcast_attention=True,
+        upcast_softmax=True,
+    ):
+        super().__init__()
+        self.channels = channels
+        self.pre_norm = pre_norm
+
+        self.cpe = PointSequential(
+            spconv.SubMConv3d(
+                channels,
+                channels,
+                kernel_size=3,
+                bias=True,
+                indice_key=cpe_indice_key,
+            ),
+            nn.Linear(channels, channels),
+            norm_layer(channels),
+        )
+
+        self.norm1 = PointSequential(norm_layer(channels))
+        self.attn_list = nn.ModuleList([
+            SerializedAttention(
+                channels=channels,
+                patch_size=patch_size,
+                num_heads=num_heads,
+                qkv_bias=qkv_bias,
+                qk_scale=qk_scale,
+                attn_drop=attn_drop,
+                proj_drop=proj_drop,
+                order_index=0,
+                enable_rpe=enable_rpe,
+                enable_flash=enable_flash,
+                upcast_attention=upcast_attention,
+                upcast_softmax=upcast_softmax,
+            ),
+            SerializedAttention(
+                channels=channels,
+                patch_size=patch_size,
+                num_heads=num_heads,
+                qkv_bias=qkv_bias,
+                qk_scale=qk_scale,
+                attn_drop=attn_drop,
+                proj_drop=proj_drop,
+                order_index=1,
+                enable_rpe=enable_rpe,
+                enable_flash=enable_flash,
+                upcast_attention=upcast_attention,
+                upcast_softmax=upcast_softmax,
+            ),
+            SerializedAttention(
+                channels=channels,
+                patch_size=patch_size,
+                num_heads=num_heads,
+                qkv_bias=qkv_bias,
+                qk_scale=qk_scale,
+                attn_drop=attn_drop,
+                proj_drop=proj_drop,
+                order_index=2,
+                enable_rpe=enable_rpe,
+                enable_flash=enable_flash,
+                upcast_attention=upcast_attention,
+                upcast_softmax=upcast_softmax,
+            ),
+            SerializedAttention(
+                channels=channels,
+                patch_size=patch_size,
+                num_heads=num_heads,
+                qkv_bias=qkv_bias,
+                qk_scale=qk_scale,
+                attn_drop=attn_drop,
+                proj_drop=proj_drop,
+                order_index=3,
+                enable_rpe=enable_rpe,
+                enable_flash=enable_flash,
+                upcast_attention=upcast_attention,
+                upcast_softmax=upcast_softmax,
+            )
+        ])
+
+        self.norm2 = PointSequential(norm_layer(channels))
+        self.mlp_list = nn.ModuleList([
+            PointSequential(
+                MLP(
+                    in_channels=channels,
+                    hidden_channels=int(channels * mlp_ratio),
+                    out_channels=channels,
+                    act_layer=act_layer,
+                    drop=proj_drop,
+                )
+            ) for _ in range(4)
+        ])
+
+        self.drop_path = PointSequential(
+            DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
+        )
+
+    def forward(self, point: Point):
+        shortcut = point.feat
+        point=self.cpe(point)
+        point.feat=shortcut + point.feat
+
+        # save the base feature
+        shortcut=point.feat
+        if self.pre_norm:
+            point=self.norm1(point)
+
+        # Process each branch in parallel and collect features
+        attn_branches = [self.drop_path(attn_branch(point)) for attn_branch in self.attn_list]
+        for i, attn_branch in enumerate(attn_branches):
+            attn_branches[i].feat = shortcut + attn_branch.feat
+        if not self.pre_norm:
+            attn_branches = [self.norm1(branch) for branch in attn_branches]
+
+        # Normalize and MLP for each branch
+        shortcut_branches = [branch.feat for branch in attn_branches]
+        if self.pre_norm:
+            attn_branches = [self.norm2(branch) for branch in attn_branches]
+
+        for branch in attn_branches:
+            mlp_branches = [self.drop_path(mlp_branch(branch)) for mlp_branch in self.mlp_list]
+
+        for i, mlp_branch in enumerate(mlp_branches):
+            mlp_branches[i].feat = shortcut_branches[i] + mlp_branch.feat
+        if not self.pre_norm:
+            mlp_branches = [self.norm2(branch) for branch in mlp_branches]
+
+        # Average the features from all branches
+        current_feats = [branch.feat for branch in mlp_branches]
+        point.feat = torch.mean(torch.stack(current_feats), dim=0)
+
+        point.sparse_conv_feat.replace_feature(point.feat)
+        return point
+
 
 class Block(PointModule):
     def __init__(
@@ -621,29 +772,56 @@ class PointTransformerV3(PointModule):
                     name="down",
                 )
             for i in range(enc_depths[s]):
-                enc.add(
-                    Block(
-                        channels=enc_channels[s],
-                        num_heads=enc_num_head[s],
-                        patch_size=enc_patch_size[s],
-                        mlp_ratio=mlp_ratio,
-                        qkv_bias=qkv_bias,
-                        qk_scale=qk_scale,
-                        attn_drop=attn_drop,
-                        proj_drop=proj_drop,
-                        drop_path=enc_drop_path_[i],
-                        norm_layer=ln_layer,
-                        act_layer=act_layer,
-                        pre_norm=pre_norm,
-                        order_index=i % len(self.order),
-                        cpe_indice_key=f"stage{s}",
-                        enable_rpe=enable_rpe,
-                        enable_flash=enable_flash,
-                        upcast_attention=upcast_attention,
-                        upcast_softmax=upcast_softmax,
-                    ),
-                    name=f"block{i}",
-                )
+                # only use ParallelBlockV1 for the fourth stage
+                if s != 3:
+                    enc.add(
+                        Block(
+                            channels=enc_channels[s],
+                            num_heads=enc_num_head[s],
+                            patch_size=enc_patch_size[s],
+                            mlp_ratio=mlp_ratio,
+                            qkv_bias=qkv_bias,
+                            qk_scale=qk_scale,
+                            attn_drop=attn_drop,
+                            proj_drop=proj_drop,
+                            drop_path=enc_drop_path_[i],
+                            norm_layer=ln_layer,
+                            act_layer=act_layer,
+                            pre_norm=pre_norm,
+                            order_index=i % len(self.order),
+                            cpe_indice_key=f"stage{s}",
+                            enable_rpe=enable_rpe,
+                            enable_flash=enable_flash,
+                            upcast_attention=upcast_attention,
+                            upcast_softmax=upcast_softmax,
+                        ),
+                        name=f"block{i}",
+                    )
+                else:
+                    enc.add(
+                        ParallelBlockV1(
+                            channels=enc_channels[s],
+                            num_heads=enc_num_head[s],
+                            patch_size=enc_patch_size[s],
+                            mlp_ratio=mlp_ratio,
+                            qkv_bias=qkv_bias,
+                            qk_scale=qk_scale,
+                            attn_drop=attn_drop,
+                            proj_drop=proj_drop,
+                            drop_path=enc_drop_path_[i],
+                            norm_layer=ln_layer,
+                            act_layer=act_layer,
+                            pre_norm=pre_norm,
+                            cpe_indice_key=f"stage{s}",
+                            enable_rpe=enable_rpe,
+                            enable_flash=enable_flash,
+                            upcast_attention=upcast_attention,
+                            upcast_softmax=upcast_softmax,
+                        ),
+                        name=f"parallelblock{i}",
+                    )
+
+
             if len(enc) != 0:
                 self.enc.add(module=enc, name=f"enc{s}")
 
