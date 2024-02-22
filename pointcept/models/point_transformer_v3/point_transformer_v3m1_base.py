@@ -285,82 +285,132 @@ class ParallelBlockV1(PointModule):
         )
 
         self.norm1 = PointSequential(norm_layer(channels))
-        self.attn_list = nn.ModuleList([
-            SerializedAttention(
-                channels=channels,
-                patch_size=patch_size,
-                num_heads=num_heads,
-                qkv_bias=qkv_bias,
-                qk_scale=qk_scale,
-                attn_drop=attn_drop,
-                proj_drop=proj_drop,
-                order_index=0,
-                enable_rpe=enable_rpe,
-                enable_flash=enable_flash,
-                upcast_attention=upcast_attention,
-                upcast_softmax=upcast_softmax,
-            ),
-            SerializedAttention(
-                channels=channels,
-                patch_size=patch_size,
-                num_heads=num_heads,
-                qkv_bias=qkv_bias,
-                qk_scale=qk_scale,
-                attn_drop=attn_drop,
-                proj_drop=proj_drop,
-                order_index=1,
-                enable_rpe=enable_rpe,
-                enable_flash=enable_flash,
-                upcast_attention=upcast_attention,
-                upcast_softmax=upcast_softmax,
-            )
-            # SerializedAttention(
-            #     channels=channels,
-            #     patch_size=patch_size,
-            #     num_heads=num_heads,
-            #     qkv_bias=qkv_bias,
-            #     qk_scale=qk_scale,
-            #     attn_drop=attn_drop,
-            #     proj_drop=proj_drop,
-            #     order_index=2,
-            #     enable_rpe=enable_rpe,
-            #     enable_flash=enable_flash,
-            #     upcast_attention=upcast_attention,
-            #     upcast_softmax=upcast_softmax,
-            # ),
-            # SerializedAttention(
-            #     channels=channels,
-            #     patch_size=patch_size,
-            #     num_heads=num_heads,
-            #     qkv_bias=qkv_bias,
-            #     qk_scale=qk_scale,
-            #     attn_drop=attn_drop,
-            #     proj_drop=proj_drop,
-            #     order_index=3,
-            #     enable_rpe=enable_rpe,
-            #     enable_flash=enable_flash,
-            #     upcast_attention=upcast_attention,
-            #     upcast_softmax=upcast_softmax,
-            # )
-        ])
+        # self.attn_list = nn.ModuleList([
+        #     SerializedAttention(
+        #         channels=channels,
+        #         patch_size=patch_size,
+        #         num_heads=num_heads,
+        #         qkv_bias=qkv_bias,
+        #         qk_scale=qk_scale,
+        #         attn_drop=attn_drop,
+        #         proj_drop=proj_drop,
+        #         order_index=0,
+        #         enable_rpe=enable_rpe,
+        #         enable_flash=enable_flash,
+        #         upcast_attention=upcast_attention,
+        #         upcast_softmax=upcast_softmax,
+        #     ),
+        #     SerializedAttention(
+        #         channels=channels,
+        #         patch_size=patch_size,
+        #         num_heads=num_heads,
+        #         qkv_bias=qkv_bias,
+        #         qk_scale=qk_scale,
+        #         attn_drop=attn_drop,
+        #         proj_drop=proj_drop,
+        #         order_index=1,
+        #         enable_rpe=enable_rpe,
+        #         enable_flash=enable_flash,
+        #         upcast_attention=upcast_attention,
+        #         upcast_softmax=upcast_softmax,
+        #     )
+        #     # SerializedAttention(
+        #     #     channels=channels,
+        #     #     patch_size=patch_size,
+        #     #     num_heads=num_heads,
+        #     #     qkv_bias=qkv_bias,
+        #     #     qk_scale=qk_scale,
+        #     #     attn_drop=attn_drop,
+        #     #     proj_drop=proj_drop,
+        #     #     order_index=2,
+        #     #     enable_rpe=enable_rpe,
+        #     #     enable_flash=enable_flash,
+        #     #     upcast_attention=upcast_attention,
+        #     #     upcast_softmax=upcast_softmax,
+        #     # ),
+        #     # SerializedAttention(
+        #     #     channels=channels,
+        #     #     patch_size=patch_size,
+        #     #     num_heads=num_heads,
+        #     #     qkv_bias=qkv_bias,
+        #     #     qk_scale=qk_scale,
+        #     #     attn_drop=attn_drop,
+        #     #     proj_drop=proj_drop,
+        #     #     order_index=3,
+        #     #     enable_rpe=enable_rpe,
+        #     #     enable_flash=enable_flash,
+        #     #     upcast_attention=upcast_attention,
+        #     #     upcast_softmax=upcast_softmax,
+        #     # )
+        # ])
 
         # self.norm2 = PointSequential(norm_layer(channels))
-        self.norm2_list = nn.ModuleList([
-            PointSequential(norm_layer(channels)) for _ in range(2) # 2 branches
-        ])
+        # self.norm2_list = nn.ModuleList([
+        #     PointSequential(norm_layer(channels)) for _ in range(2) # 2 branches
+        # ])
+        self.attn_0 = SerializedAttention(
+            channels=channels,
+            patch_size=patch_size,
+            num_heads=num_heads,
+            qkv_bias=qkv_bias,
+            qk_scale=qk_scale,
+            attn_drop=attn_drop,
+            proj_drop=proj_drop,
+            order_index=0,
+            enable_rpe=enable_rpe,
+            enable_flash=enable_flash,
+            upcast_attention=upcast_attention,
+            upcast_softmax=upcast_softmax,
+        )
 
+        self.attn_1 = SerializedAttention(
+            channels=channels,
+            patch_size=patch_size,
+            num_heads=num_heads,
+            qkv_bias=qkv_bias,
+            qk_scale=qk_scale,
+            attn_drop=attn_drop,
+            proj_drop=proj_drop,
+            order_index=1,
+            enable_rpe=enable_rpe,
+            enable_flash=enable_flash,
+            upcast_attention=upcast_attention,
+            upcast_softmax=upcast_softmax,
+        )
 
-        self.mlp_list = nn.ModuleList([
-            PointSequential(
-                MLP(
-                    in_channels=channels,
-                    hidden_channels=int(channels * mlp_ratio),
-                    out_channels=channels,
-                    act_layer=act_layer,
-                    drop=proj_drop,
-                )
-            ) for _ in range(2) # 2 branches
-        ])
+        self.norm2_0 = PointSequential(norm_layer(channels))
+        self.norm2_1 = PointSequential(norm_layer(channels))
+
+        # self.mlp_list = nn.ModuleList([
+        #     PointSequential(
+        #         MLP(
+        #             in_channels=channels,
+        #             hidden_channels=int(channels * mlp_ratio),
+        #             out_channels=channels,
+        #             act_layer=act_layer,
+        #             drop=proj_drop,
+        #         )
+        #     ) for _ in range(2) # 2 branches
+        # ])
+        self.mlp_0 = PointSequential(
+            MLP(
+                in_channels=channels,
+                hidden_channels=int(channels * mlp_ratio),
+                out_channels=channels,
+                act_layer=act_layer,
+                drop=proj_drop,
+            )
+        )
+
+        self.mlp_1 = PointSequential(
+            MLP(
+                in_channels=channels,
+                hidden_channels=int(channels * mlp_ratio),
+                out_channels=channels,
+                act_layer=act_layer,
+                drop=proj_drop,
+            )
+        )
 
 
         self.drop_path = PointSequential(
@@ -378,30 +428,58 @@ class ParallelBlockV1(PointModule):
             point=self.norm1(point)
 
         # Process each branch in parallel and collect features
-        attn_branches = [self.drop_path(attn_branch(point)) for attn_branch in self.attn_list]
-        for i, attn_branch in enumerate(attn_branches):
-            attn_branches[i].feat = shortcut + attn_branch.feat
+        branch_0 = self.drop_path(self.attn_0(point))
+        branch_1 = self.drop_path(self.attn_1(point))
+        branch_0.feat = shortcut + branch_0.feat
+        branch_1.feat = shortcut + branch_1.feat
         if not self.pre_norm:
-            attn_branches = [self.norm1(branch) for branch in attn_branches]
+            branch_0 = self.norm1(branch_0)
+            branch_1 = self.norm1(branch_1)
 
-        # Normalize and MLP for each branch
-        shortcut_branches = [branch.feat for branch in attn_branches]
+        shortcut0 = branch_0.feat
+        shortcut1 = branch_1.feat
         if self.pre_norm:
-            for norm in self.norm2_list:
-                attn_branches = [norm(branch) for branch in attn_branches]
+            branch_0 = self.norm2_0(branch_0)
+            branch_1 = self.norm2_1(branch_1)
 
-        for branch in attn_branches:
-            mlp_branches = [self.drop_path(mlp_branch(branch)) for mlp_branch in self.mlp_list]
-
-        for i, mlp_branch in enumerate(mlp_branches):
-            mlp_branches[i].feat = shortcut_branches[i] + mlp_branch.feat
+        branch_0 = self.drop_path(self.mlp_0(branch_0))
+        branch_1 = self.drop_path(self.mlp_1(branch_1))
+        branch_0.feat = shortcut0 + branch_0.feat
+        branch_1.feat = shortcut1 + branch_1.feat
         if not self.pre_norm:
-            for norm in self.norm2_list:
-                mlp_branches = [norm(branch) for branch in mlp_branches]
+            branch_0 = self.norm2_0(branch_0)
+            branch_1 = self.norm2_1(branch_1)
 
         # Average the features from all branches
-        current_feats = [branch.feat for branch in mlp_branches]
-        point.feat = torch.mean(torch.stack(current_feats), dim=0)
+        point.feat = (branch_0.feat + branch_1.feat) / 2
+
+        # # Process each branch in parallel and collect features
+        # for i, attn_layer in enumerate(self.attn_list):
+        #    branches[i] = self.drop_path(attn_layer(point))
+
+        # for i, attn_branch in enumerate(attn_branches):
+        #     attn_branches[i].feat = shortcut + attn_branch.feat
+        # if not self.pre_norm:
+        #     attn_branches = [self.norm1(branch) for branch in attn_branches]
+        #
+        # # Normalize and MLP for each branch
+        # shortcut_branches = [branch.feat for branch in attn_branches]
+        # if self.pre_norm:
+        #     for norm in self.norm2_list:
+        #         attn_branches = [norm(branch) for branch in attn_branches]
+        #
+        # for branch in attn_branches:
+        #     mlp_branches = [self.drop_path(mlp_branch(branch)) for mlp_branch in self.mlp_list]
+        #
+        # for i, mlp_branch in enumerate(mlp_branches):
+        #     mlp_branches[i].feat = shortcut_branches[i] + mlp_branch.feat
+        # if not self.pre_norm:
+        #     for norm in self.norm2_list:
+        #         mlp_branches = [norm(branch) for branch in mlp_branches]
+        #
+        # # Average the features from all branches
+        # current_feats = [branch.feat for branch in mlp_branches]
+        # point.feat = torch.mean(torch.stack(current_feats), dim=0)
 
         point.sparse_conv_feat.replace_feature(point.feat)
         return point
