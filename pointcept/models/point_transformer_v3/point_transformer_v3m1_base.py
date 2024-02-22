@@ -313,38 +313,43 @@ class ParallelBlockV1(PointModule):
                 enable_flash=enable_flash,
                 upcast_attention=upcast_attention,
                 upcast_softmax=upcast_softmax,
-            ),
-            SerializedAttention(
-                channels=channels,
-                patch_size=patch_size,
-                num_heads=num_heads,
-                qkv_bias=qkv_bias,
-                qk_scale=qk_scale,
-                attn_drop=attn_drop,
-                proj_drop=proj_drop,
-                order_index=2,
-                enable_rpe=enable_rpe,
-                enable_flash=enable_flash,
-                upcast_attention=upcast_attention,
-                upcast_softmax=upcast_softmax,
-            ),
-            SerializedAttention(
-                channels=channels,
-                patch_size=patch_size,
-                num_heads=num_heads,
-                qkv_bias=qkv_bias,
-                qk_scale=qk_scale,
-                attn_drop=attn_drop,
-                proj_drop=proj_drop,
-                order_index=3,
-                enable_rpe=enable_rpe,
-                enable_flash=enable_flash,
-                upcast_attention=upcast_attention,
-                upcast_softmax=upcast_softmax,
             )
+            # SerializedAttention(
+            #     channels=channels,
+            #     patch_size=patch_size,
+            #     num_heads=num_heads,
+            #     qkv_bias=qkv_bias,
+            #     qk_scale=qk_scale,
+            #     attn_drop=attn_drop,
+            #     proj_drop=proj_drop,
+            #     order_index=2,
+            #     enable_rpe=enable_rpe,
+            #     enable_flash=enable_flash,
+            #     upcast_attention=upcast_attention,
+            #     upcast_softmax=upcast_softmax,
+            # ),
+            # SerializedAttention(
+            #     channels=channels,
+            #     patch_size=patch_size,
+            #     num_heads=num_heads,
+            #     qkv_bias=qkv_bias,
+            #     qk_scale=qk_scale,
+            #     attn_drop=attn_drop,
+            #     proj_drop=proj_drop,
+            #     order_index=3,
+            #     enable_rpe=enable_rpe,
+            #     enable_flash=enable_flash,
+            #     upcast_attention=upcast_attention,
+            #     upcast_softmax=upcast_softmax,
+            # )
         ])
 
-        self.norm2 = PointSequential(norm_layer(channels))
+        # self.norm2 = PointSequential(norm_layer(channels))
+        self.norm2_list = nn.ModuleList([
+            PointSequential(norm_layer(channels)) for _ in range(2) # 2 branches
+        ])
+
+
         self.mlp_list = nn.ModuleList([
             PointSequential(
                 MLP(
@@ -354,8 +359,9 @@ class ParallelBlockV1(PointModule):
                     act_layer=act_layer,
                     drop=proj_drop,
                 )
-            ) for _ in range(4)
+            ) for _ in range(2) # 2 branches
         ])
+
 
         self.drop_path = PointSequential(
             DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
@@ -381,7 +387,8 @@ class ParallelBlockV1(PointModule):
         # Normalize and MLP for each branch
         shortcut_branches = [branch.feat for branch in attn_branches]
         if self.pre_norm:
-            attn_branches = [self.norm2(branch) for branch in attn_branches]
+            for norm in self.norm2_list:
+                attn_branches = [norm(branch) for branch in attn_branches]
 
         for branch in attn_branches:
             mlp_branches = [self.drop_path(mlp_branch(branch)) for mlp_branch in self.mlp_list]
@@ -389,7 +396,8 @@ class ParallelBlockV1(PointModule):
         for i, mlp_branch in enumerate(mlp_branches):
             mlp_branches[i].feat = shortcut_branches[i] + mlp_branch.feat
         if not self.pre_norm:
-            mlp_branches = [self.norm2(branch) for branch in mlp_branches]
+            for norm in self.norm2_list:
+                mlp_branches = [norm(branch) for branch in mlp_branches]
 
         # Average the features from all branches
         current_feats = [branch.feat for branch in mlp_branches]
@@ -819,6 +827,27 @@ class PointTransformerV3(PointModule):
                             upcast_softmax=upcast_softmax,
                         ),
                         name=f"parallelblock{i}",
+                        # Block(
+                        #     channels=enc_channels[s],
+                        #     num_heads=enc_num_head[s],
+                        #     patch_size=enc_patch_size[s],
+                        #     mlp_ratio=mlp_ratio,
+                        #     qkv_bias=qkv_bias,
+                        #     qk_scale=qk_scale,
+                        #     attn_drop=attn_drop,
+                        #     proj_drop=proj_drop,
+                        #     drop_path=enc_drop_path_[i],
+                        #     norm_layer=ln_layer,
+                        #     act_layer=act_layer,
+                        #     pre_norm=pre_norm,
+                        #     order_index=i % len(self.order),
+                        #     cpe_indice_key=f"stage{s}",
+                        #     enable_rpe=enable_rpe,
+                        #     enable_flash=enable_flash,
+                        #     upcast_attention=upcast_attention,
+                        #     upcast_softmax=upcast_softmax,
+                        # ),
+                        # name=f"block{i}",
                     )
 
 
