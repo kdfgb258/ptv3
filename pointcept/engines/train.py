@@ -204,6 +204,7 @@ class Trainer(TrainerBase):
                 self.optimizer.step()
             else:
                 print("infinite gradient.")
+                self.optimizer.step()
 
             self.scheduler.step()
         if self.cfg.empty_cache:
