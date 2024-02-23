@@ -194,7 +194,17 @@ class Trainer(TrainerBase):
                 self.scheduler.step()
         else:
             loss.backward()
-            self.optimizer.step()
+
+            grad_norm=torch.nn.utils.clip_grad_norm_(
+                parameters=self.model.parameters(),
+                max_norm=1.0,
+                norm_type=2
+            )
+            if grad_norm is not None and torch.isfinite(grad_norm):
+                self.optimizer.step()
+            else:
+                print("infinite gradient.")
+
             self.scheduler.step()
         if self.cfg.empty_cache:
             torch.cuda.empty_cache()
