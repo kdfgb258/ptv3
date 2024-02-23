@@ -285,69 +285,72 @@ class ParallelBlockV1(PointModule):
         )
 
         self.norm1 = PointSequential(norm_layer(channels))
-        # self.attn_list = nn.ModuleList([
-        #     SerializedAttention(
-        #         channels=channels,
-        #         patch_size=patch_size,
-        #         num_heads=num_heads,
-        #         qkv_bias=qkv_bias,
-        #         qk_scale=qk_scale,
-        #         attn_drop=attn_drop,
-        #         proj_drop=proj_drop,
-        #         order_index=0,
-        #         enable_rpe=enable_rpe,
-        #         enable_flash=enable_flash,
-        #         upcast_attention=upcast_attention,
-        #         upcast_softmax=upcast_softmax,
-        #     ),
-        #     SerializedAttention(
-        #         channels=channels,
-        #         patch_size=patch_size,
-        #         num_heads=num_heads,
-        #         qkv_bias=qkv_bias,
-        #         qk_scale=qk_scale,
-        #         attn_drop=attn_drop,
-        #         proj_drop=proj_drop,
-        #         order_index=1,
-        #         enable_rpe=enable_rpe,
-        #         enable_flash=enable_flash,
-        #         upcast_attention=upcast_attention,
-        #         upcast_softmax=upcast_softmax,
-        #     )
-        #     # SerializedAttention(
-        #     #     channels=channels,
-        #     #     patch_size=patch_size,
-        #     #     num_heads=num_heads,
-        #     #     qkv_bias=qkv_bias,
-        #     #     qk_scale=qk_scale,
-        #     #     attn_drop=attn_drop,
-        #     #     proj_drop=proj_drop,
-        #     #     order_index=2,
-        #     #     enable_rpe=enable_rpe,
-        #     #     enable_flash=enable_flash,
-        #     #     upcast_attention=upcast_attention,
-        #     #     upcast_softmax=upcast_softmax,
-        #     # ),
-        #     # SerializedAttention(
-        #     #     channels=channels,
-        #     #     patch_size=patch_size,
-        #     #     num_heads=num_heads,
-        #     #     qkv_bias=qkv_bias,
-        #     #     qk_scale=qk_scale,
-        #     #     attn_drop=attn_drop,
-        #     #     proj_drop=proj_drop,
-        #     #     order_index=3,
-        #     #     enable_rpe=enable_rpe,
-        #     #     enable_flash=enable_flash,
-        #     #     upcast_attention=upcast_attention,
-        #     #     upcast_softmax=upcast_softmax,
-        #     # )
-        # ])
+
+        '''
+        self.attn_list = nn.ModuleList([
+            SerializedAttention(
+                channels=channels,
+                patch_size=patch_size,
+                num_heads=num_heads,
+                qkv_bias=qkv_bias,
+                qk_scale=qk_scale,
+                attn_drop=attn_drop,
+                proj_drop=proj_drop,
+                order_index=0,
+                enable_rpe=enable_rpe,
+                enable_flash=enable_flash,
+                upcast_attention=upcast_attention,
+                upcast_softmax=upcast_softmax,
+            ),
+            SerializedAttention(
+                channels=channels,
+                patch_size=patch_size,
+                num_heads=num_heads,
+                qkv_bias=qkv_bias,
+                qk_scale=qk_scale,
+                attn_drop=attn_drop,
+                proj_drop=proj_drop,
+                order_index=1,
+                enable_rpe=enable_rpe,
+                enable_flash=enable_flash,
+                upcast_attention=upcast_attention,
+                upcast_softmax=upcast_softmax,
+            )
+            SerializedAttention(
+                channels=channels,
+                patch_size=patch_size,
+                num_heads=num_heads,
+                qkv_bias=qkv_bias,
+                qk_scale=qk_scale,
+                attn_drop=attn_drop,
+                proj_drop=proj_drop,
+                order_index=2,
+                enable_rpe=enable_rpe,
+                enable_flash=enable_flash,
+                upcast_attention=upcast_attention,
+                upcast_softmax=upcast_softmax,
+            ),
+            SerializedAttention(
+                channels=channels,
+                patch_size=patch_size,
+                num_heads=num_heads,
+                qkv_bias=qkv_bias,
+                qk_scale=qk_scale,
+                attn_drop=attn_drop,
+                proj_drop=proj_drop,
+                order_index=3,
+                enable_rpe=enable_rpe,
+                enable_flash=enable_flash,
+                upcast_attention=upcast_attention,
+                upcast_softmax=upcast_softmax,
+            )
+        ])
 
         # self.norm2 = PointSequential(norm_layer(channels))
-        # self.norm2_list = nn.ModuleList([
-        #     PointSequential(norm_layer(channels)) for _ in range(2) # 2 branches
-        # ])
+        self.norm2_list = nn.ModuleList([
+            PointSequential(norm_layer(channels)) for _ in range(4) # 4 branches
+        ])
+        '''
         self.attn_0 = SerializedAttention(
             channels=channels,
             patch_size=patch_size,
@@ -377,21 +380,53 @@ class ParallelBlockV1(PointModule):
             upcast_attention=upcast_attention,
             upcast_softmax=upcast_softmax,
         )
+        self.attn_2 = SerializedAttention(
+            channels=channels,
+            patch_size=patch_size,
+            num_heads=num_heads,
+            qkv_bias=qkv_bias,
+            qk_scale=qk_scale,
+            attn_drop=attn_drop,
+            proj_drop=proj_drop,
+            order_index=2,
+            enable_rpe=enable_rpe,
+            enable_flash=enable_flash,
+            upcast_attention=upcast_attention,
+            upcast_softmax=upcast_softmax,
+        )
+        self.attn_3 = SerializedAttention(
+            channels=channels,
+            patch_size=patch_size,
+            num_heads=num_heads,
+            qkv_bias=qkv_bias,
+            qk_scale=qk_scale,
+            attn_drop=attn_drop,
+            proj_drop=proj_drop,
+            order_index=3,
+            enable_rpe=enable_rpe,
+            enable_flash=enable_flash,
+            upcast_attention=upcast_attention,
+            upcast_softmax=upcast_softmax,
+        )
 
         self.norm2_0 = PointSequential(norm_layer(channels))
         self.norm2_1 = PointSequential(norm_layer(channels))
+        self.norm2_2 = PointSequential(norm_layer(channels))
+        self.norm2_3 = PointSequential(norm_layer(channels))
 
-        # self.mlp_list = nn.ModuleList([
-        #     PointSequential(
-        #         MLP(
-        #             in_channels=channels,
-        #             hidden_channels=int(channels * mlp_ratio),
-        #             out_channels=channels,
-        #             act_layer=act_layer,
-        #             drop=proj_drop,
-        #         )
-        #     ) for _ in range(2) # 2 branches
-        # ])
+        '''
+        self.mlp_list = nn.ModuleList([
+            PointSequential(
+                MLP(
+                    in_channels=channels,
+                    hidden_channels=int(channels * mlp_ratio),
+                    out_channels=channels,
+                    act_layer=act_layer,
+                    drop=proj_drop,
+                )
+            ) for _ in range(4) # 2 branches
+        ])
+        '''
         self.mlp_0 = PointSequential(
             MLP(
                 in_channels=channels,
@@ -411,7 +446,24 @@ class ParallelBlockV1(PointModule):
                 drop=proj_drop,
             )
         )
-
+        self.mlp_2 = PointSequential(
+            MLP(
+                in_channels=channels,
+                hidden_channels=int(channels * mlp_ratio),
+                out_channels=channels,
+                act_layer=act_layer,
+                drop=proj_drop,
+            )
+        )
+        self.mlp_3 = PointSequential(
+            MLP(
+                in_channels=channels,
+                hidden_channels=int(channels * mlp_ratio),
+                out_channels=channels,
+                act_layer=act_layer,
+                drop=proj_drop,
+            )
+        )
 
         self.drop_path = PointSequential(
             DropPath(drop_path) if drop_path > 0.0 else nn.Identity()
@@ -430,28 +482,46 @@ class ParallelBlockV1(PointModule):
         # Process each branch in parallel and collect features
         branch_0 = self.drop_path(self.attn_0(point))
         branch_1 = self.drop_path(self.attn_1(point))
+        branch_2 = self.drop_path(self.attn_2(point))
+        branch_3 = self.drop_path(self.attn_3(point))
+
         branch_0.feat = shortcut + branch_0.feat
         branch_1.feat = shortcut + branch_1.feat
+        branch_2.feat = shortcut + branch_2.feat
+        branch_3.feat = shortcut + branch_3.feat
         if not self.pre_norm:
             branch_0 = self.norm1(branch_0)
             branch_1 = self.norm1(branch_1)
+            branch_2 = self.norm1(branch_2)
+            branch_3 = self.norm1(branch_3)
 
         shortcut0 = branch_0.feat
         shortcut1 = branch_1.feat
+        shortcut2 = branch_2.feat
+        shortcut3 = branch_3.feat
         if self.pre_norm:
             branch_0 = self.norm2_0(branch_0)
             branch_1 = self.norm2_1(branch_1)
+            branch_2 = self.norm2_2(branch_2)
+            branch_3 = self.norm2_3(branch_3)
 
         branch_0 = self.drop_path(self.mlp_0(branch_0))
         branch_1 = self.drop_path(self.mlp_1(branch_1))
+        branch_2 = self.drop_path(self.mlp_2(branch_2))
+        branch_3 = self.drop_path(self.mlp_3(branch_3))
         branch_0.feat = shortcut0 + branch_0.feat
         branch_1.feat = shortcut1 + branch_1.feat
+        branch_2.feat = shortcut2 + branch_2.feat
+        branch_3.feat = shortcut3 + branch_3.feat
         if not self.pre_norm:
             branch_0 = self.norm2_0(branch_0)
             branch_1 = self.norm2_1(branch_1)
+            branch_2 = self.norm2_2(branch_2)
+            branch_3 = self.norm2_3(branch_3)
 
         # Average the features from all branches
-        point.feat = (branch_0.feat + branch_1.feat) / 2
+        current_feats = [branch_0.feat, branch_1.feat, branch_2.feat, branch_3.feat]
+        point.feat = torch.mean(torch.stack(current_feats), dim=0)
 
         # # Process each branch in parallel and collect features
         # for i, attn_layer in enumerate(self.attn_list):
