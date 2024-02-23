@@ -424,7 +424,7 @@ class ParallelBlockV1(PointModule):
                     act_layer=act_layer,
                     drop=proj_drop,
                 )
-            ) for _ in range(4) # 2 branches
+            ) for _ in range(4) # 4 branches
         ])
         '''
         self.mlp_0 = PointSequential(
@@ -523,33 +523,35 @@ class ParallelBlockV1(PointModule):
         current_feats = [branch_0.feat, branch_1.feat, branch_2.feat, branch_3.feat]
         point.feat = torch.mean(torch.stack(current_feats), dim=0)
 
-        # # Process each branch in parallel and collect features
-        # for i, attn_layer in enumerate(self.attn_list):
-        #    branches[i] = self.drop_path(attn_layer(point))
+        '''
+        # Process each branch in parallel and collect features
+        for i, attn_layer in enumerate(self.attn_list):
+           branches[i] = self.drop_path(attn_layer(point))
 
-        # for i, attn_branch in enumerate(attn_branches):
-        #     attn_branches[i].feat = shortcut + attn_branch.feat
-        # if not self.pre_norm:
-        #     attn_branches = [self.norm1(branch) for branch in attn_branches]
-        #
-        # # Normalize and MLP for each branch
-        # shortcut_branches = [branch.feat for branch in attn_branches]
-        # if self.pre_norm:
-        #     for norm in self.norm2_list:
-        #         attn_branches = [norm(branch) for branch in attn_branches]
-        #
-        # for branch in attn_branches:
-        #     mlp_branches = [self.drop_path(mlp_branch(branch)) for mlp_branch in self.mlp_list]
-        #
-        # for i, mlp_branch in enumerate(mlp_branches):
-        #     mlp_branches[i].feat = shortcut_branches[i] + mlp_branch.feat
-        # if not self.pre_norm:
-        #     for norm in self.norm2_list:
-        #         mlp_branches = [norm(branch) for branch in mlp_branches]
-        #
-        # # Average the features from all branches
-        # current_feats = [branch.feat for branch in mlp_branches]
-        # point.feat = torch.mean(torch.stack(current_feats), dim=0)
+        for i, attn_branch in enumerate(attn_branches):
+            attn_branches[i].feat = shortcut + attn_branch.feat
+        if not self.pre_norm:
+            attn_branches = [self.norm1(branch) for branch in attn_branches]
+
+        # Normalize and MLP for each branch
+        shortcut_branches = [branch.feat for branch in attn_branches]
+        if self.pre_norm:
+            for norm in self.norm2_list:
+                attn_branches = [norm(branch) for branch in attn_branches]
+
+        for branch in attn_branches:
+            mlp_branches = [self.drop_path(mlp_branch(branch)) for mlp_branch in self.mlp_list]
+
+        for i, mlp_branch in enumerate(mlp_branches):
+            mlp_branches[i].feat = shortcut_branches[i] + mlp_branch.feat
+        if not self.pre_norm:
+            for norm in self.norm2_list:
+                mlp_branches = [norm(branch) for branch in mlp_branches]
+
+        # Average the features from all branches
+        current_feats = [branch.feat for branch in mlp_branches]
+        point.feat = torch.mean(torch.stack(current_feats), dim=0)
+        '''
 
         point.sparse_conv_feat.replace_feature(point.feat)
         return point
