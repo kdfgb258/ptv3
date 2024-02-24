@@ -227,8 +227,14 @@ class Trainer(TrainerBase):
 
             # accumulate batch size
             if (self.accum_steps + 1) % self.target_steps == 0:
-                # update after accumulate batch
-                self.optimizer.step()
+                # gradient clip
+                grad_norm=torch.nn.utils.clip_grad_norm_(parameters=self.model.parameters(), max_norm=1.0, norm_type=2)
+                if grad_norm is not None and torch.isfinite(grad_norm):
+                    # update after accumulate batch
+                    self.optimizer.step()
+                else:
+                    print("infinite gradient.")
+
                 self.scheduler.step()
                 self.optimizer.zero_grad()
 
