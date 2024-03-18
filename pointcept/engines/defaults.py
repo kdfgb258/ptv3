@@ -11,8 +11,6 @@ import os
 import sys
 import argparse
 import multiprocessing as mp
-
-import torch
 from torch.nn.parallel import DistributedDataParallel
 
 
@@ -151,5 +149,4 @@ def default_setup(cfg):
     rank = comm.get_rank()
     seed = None if cfg.seed is None else cfg.seed * cfg.num_worker_per_gpu + rank
     set_seed(seed)
-    # torch.use_deterministic_algorithms(mode=True, warn_only=True)
     return cfg

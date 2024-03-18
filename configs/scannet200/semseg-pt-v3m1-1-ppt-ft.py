@@ -1,31 +1,34 @@
+from pointcept.datasets.preprocessing.scannet.meta_data.scannet200_constants import (
+    CLASS_LABELS_200,
+)
+
 _base_ = ["../_base_/default_runtime.py"]
 
 # misc custom setting
-batch_size = 4  # bs: total bs in all gpus -- original: 12
+batch_size = 12  # bs: total bs in all gpus
 num_worker = 24
 mix_prob = 0.8
 empty_cache = False
-enable_amp = False
-# enable_amp = True
+enable_amp = True
+find_unused_parameters = True
 
 # model settings
 model = dict(
     type="DefaultSegmentorV2",
-    num_classes=20,
+    num_classes=200,
     backbone_out_channels=64,
     backbone=dict(
         type="PT-v3m1",
         in_channels=6,
         order=("z", "z-trans", "hilbert", "hilbert-trans"),
         stride=(2, 2, 2, 2),
-        # enc_depths=(2, 2, 2, 6, 2),
-        enc_depths=(2, 2, 2, 1, 2),
-        enc_channels=(32, 64, 128, 256, 512),
-        enc_num_head=(2, 4, 8, 16, 32),
+        enc_depths=(3, 3, 3, 6, 3),
+        enc_channels=(48, 96, 192, 384, 512),
+        enc_num_head=(3, 6, 12, 24, 32),
         enc_patch_size=(1024, 1024, 1024, 1024, 1024),
-        dec_depths=(2, 2, 2, 2),
-        dec_channels=(64, 64, 128, 256),
-        dec_num_head=(4, 4, 8, 16),
+        dec_depths=(3, 3, 3, 3),
+        dec_channels=(64, 96, 192, 384),
+        dec_num_head=(4, 6, 12, 24),
         dec_patch_size=(1024, 1024, 1024, 1024),
         mlp_ratio=4,
         qkv_bias=True,
@@ -40,8 +43,8 @@ model = dict(
         upcast_attention=False,
         upcast_softmax=False,
         cls_mode=False,
-        pdnorm_bn=False,
-        pdnorm_ln=False,
+        pdnorm_bn=True,
+        pdnorm_ln=True,
         pdnorm_decouple=True,
         pdnorm_adaptive=False,
         pdnorm_affine=True,
@@ -67,34 +70,13 @@ scheduler = dict(
 param_dicts = [dict(keyword="block", lr=0.0006)]
 
 # dataset settings
-dataset_type = "ScanNetDataset"
+dataset_type = "ScanNet200Dataset"
 data_root = "data/scannet"
 
 data = dict(
-    num_classes=20,
+    num_classes=200,
     ignore_index=-1,
-    names=[
-        "wall",
-        "floor",
-        "cabinet",
-        "bed",
-        "chair",
-        "sofa",
-        "table",
-        "door",
-        "window",
-        "bookshelf",
-        "picture",
-        "counter",
-        "desk",
-        "curtain",
-        "refridgerator",
-        "shower curtain",
-        "toilet",
-        "sink",
-        "bathtub",
-        "otherfurniture",
-    ],
+    names=CLASS_LABELS_200,
     train=dict(
         type=dataset_type,
         split="train",
@@ -129,10 +111,11 @@ data = dict(
             dict(type="CenterShift", apply_z=False),
             dict(type="NormalizeColor"),
             # dict(type="ShufflePoint"),
+            dict(type="Add", keys_dict={"condition": "ScanNet"}),
             dict(type="ToTensor"),
             dict(
                 type="Collect",
-                keys=("coord", "grid_coord", "segment"),
+                keys=("coord", "grid_coord", "segment", "condition"),
                 feat_keys=("color", "normal"),
             ),
         ],
@@ -153,10 +136,11 @@ data = dict(
             ),
             dict(type="CenterShift", apply_z=False),
             dict(type="NormalizeColor"),
+            dict(type="Add", keys_dict={"condition": "ScanNet"}),
             dict(type="ToTensor"),
             dict(
                 type="Collect",
-                keys=("coord", "grid_coord", "segment"),
+                keys=("coord", "grid_coord", "segment", "condition"),
                 feat_keys=("color", "normal"),
             ),
         ],
@@ -183,10 +167,11 @@ data = dict(
             crop=None,
             post_transform=[
                 dict(type="CenterShift", apply_z=False),
+                dict(type="Add", keys_dict={"condition": "ScanNet"}),
                 dict(type="ToTensor"),
                 dict(
                     type="Collect",
-                    keys=("coord", "grid_coord", "index"),
+                    keys=("coord", "grid_coord", "index", "condition"),
                     feat_keys=("color", "normal"),
                 ),
             ],

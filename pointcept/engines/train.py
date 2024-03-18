@@ -30,7 +30,7 @@ from pointcept.utils.scheduler import build_scheduler
 from pointcept.utils.events import EventStorage
 from pointcept.utils.registry import Registry
 
-
+# list of available trainers
 TRAINERS = Registry("trainers")
 
 
@@ -254,6 +254,8 @@ class Trainer(TrainerBase):
         model = build_model(self.cfg.model)
         if self.cfg.sync_bn:
             model = nn.SyncBatchNorm.convert_sync_batchnorm(model)
+
+        # num of parameters
         n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
         # logger.info(f"Model: \n{self.model}")
         self.logger.info(f"Num params: {n_parameters}")

@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/PTv3-base.iml" filepath="$PROJECT_DIR$/.idea/PTv3-base.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/Pointcept.iml" filepath="$PROJECT_DIR$/.idea/Pointcept.iml" />
     </modules>
   </component>
 </project>

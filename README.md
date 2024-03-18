@@ -15,7 +15,7 @@
 **Pointcept** is a powerful and flexible codebase for point cloud perception research. It is also an official implementation of the following paper:
 - **Point Transformer V3: Simpler, Faster, Stronger**  
 *Xiaoyang Wu, Li Jiang, Peng-Shuai Wang, Zhijian Liu, Xihui Liu, Yu Qiao, Wanli Ouyang, Tong He, Hengshuang Zhao*  
-arXiv Preprint 2023  
+IEEE Conference on Computer Vision and Pattern Recognition (CVPR) 2024  
 [ Backbone ] [PTv3] - [ [arXiv](https://arxiv.org/abs/2312.10035) ] [ [Bib](https://xywu.me/research/ptv3/bib.txt) ] [ [Project](https://github.com/Pointcept/PointTransformerV3) ] &rarr; [here](https://github.com/Pointcept/PointTransformerV3)
 
 - **PonderV2: Pave the Way for 3D Foundation Model with A Universal Pre-training Paradigm**  
@@ -26,7 +26,7 @@ arXiv Preprint 2023
 
 - **Towards Large-scale 3D Representation Learning with Multi-dataset Point Prompt Training**  
 *Xiaoyang Wu, Zhuotao Tian, Xin Wen, Bohao Peng, Xihui Liu, Kaicheng Yu, Hengshuang Zhao*  
-arXiv Preprint 2023  
+IEEE Conference on Computer Vision and Pattern Recognition (**CVPR**) 2024  
 [ Pretrain ] [PPT] - [ [arXiv](https://arxiv.org/abs/2308.09718) ] [ [Bib](https://xywu.me/research/ppt/bib.txt) ] &rarr; [here](#point-prompt-training-ppt)
 
 
@@ -87,6 +87,7 @@ Datasets:
 
 
 ## Highlights
+- *Feb, 2024*: **PTv3** and **PPT** are accepted by CVPR'24, another **two** papers by our Pointcept team have also been accepted by CVPR'24 🎉🎉🎉. We will make them publicly available soon!
 - *Dec, 2023*: **PTv3** is released on arXiv, and the code is available in Pointcept. PTv3 is an efficient backbone model that achieves SOTA performances across indoor and outdoor scenarios.
 - *Aug, 2023*: **PPT** is released on arXiv. PPT presents a multi-dataset pre-training framework that achieves SOTA performance in both **indoor** and **outdoor** scenarios. It is compatible with various existing pre-training frameworks and backbones.  A **pre-release** version of the code is accessible; for those interested, please feel free to contact me directly for access.
 - *Mar, 2023*: We released our codebase, **Pointcept**, a highly potent tool for point cloud representation learning and perception. We welcome new work to join the _Pointcept_ family and highly recommend reading [Quick Start](#quick-start) before starting your trail.
@@ -280,7 +281,7 @@ pip install nuscenes-devkit pyquaternion
 python pointcept/datasets/preprocessing/nuscenes/preprocess_nuscenes_info.py --dataset_root ${NUSCENES_DIR} --output_root ${PROCESSED_NUSCENES_DIR} --max_sweeps ${MAX_SWEEPS} --with_camera
 ```
 - (Alternative) Our preprocess nuScenes information data can also be downloaded [[here](
-)], please agree the official license before download it.
+https://connecthkuhk-my.sharepoint.com/:u:/g/personal/wuxy_connect_hku_hk/Ee3h1I0jcepGnYYIbB2of30B9bAoVlfhkE8rJDb-ctpTVg?e=bkV8m4)], please agree the official license before download it.
 
 - Link raw dataset to processed NuScene dataset folder:
 ```bash
@@ -496,18 +497,66 @@ sh scripts/train.sh -g 2 -d semantic_kitti -c semseg-minkunet34c-0-base -n semse
 
 [PTv3](https://arxiv.org/abs/2312.10035) is an efficient backbone model that achieves SOTA performances across indoor and outdoor scenarios. The full PTv3 relies on FlashAttention, while FlashAttention relies on CUDA 11.6 and above, make sure your local Pointcept environment satisfies the requirements.
 
-If you can not upgrade your local environment to satisfy the requirements (CUDA >= 11.6), then you can disable FlashAttention by setting the model parameter `enable_flash` to `false` and reducing the `enc_patch_size` and `dec_patch_size` to a level.
+If you can not upgrade your local environment to satisfy the requirements (CUDA >= 11.6), then you can disable FlashAttention by setting the model parameter `enable_flash` to `false` and reducing the `enc_patch_size` and `dec_patch_size` to a level (e.g. 128).
 
 FlashAttention force disables RPE and forces the accuracy reduced to fp16. If you require these features, please disable `enable_flash` and adjust `enable_rpe`, `upcast_attention` and`upcast_softmax`.
 
 Detailed instructions and experiment records (containing weights) are available on the [project repository](https://github.com/Pointcept/PointTransformerV3). Example running scripts are as follows:
 ```bash
-# Scratched Settings
+# Scratched ScanNet
 sh scripts/train.sh -g 4 -d scannet -c semseg-pt-v3m1-0-base -n semseg-pt-v3m1-0-base
-sh scripts/train.sh -g 4 -d scannet200 -c semseg-pt-v3m1-0-base -n semseg-pt-v3m1-0-base
+# PPT joint training (ScanNet + Structured3D) and evaluate in ScanNet
+sh scripts/train.sh -g 8 -d scannet -c semseg-pt-v3m1-1-ppt-extreme -n semseg-pt-v3m1-1-ppt-extreme
 
-# More configs and exp records for PTv3 will be available soon. (Before Feb 2024) 
+# Scratched ScanNet200
+sh scripts/train.sh -g 4 -d scannet200 -c semseg-pt-v3m1-0-base -n semseg-pt-v3m1-0-base
+# Fine-tuning from  PPT joint training (ScanNet + Structured3D) with ScanNet200
+# PTV3_PPT_WEIGHT_PATH: Path to model weight trained by PPT multi-dataset joint training
+# e.g. exp/scannet/semseg-pt-v3m1-1-ppt-extreme/model/model_best.pth
+sh scripts/train.sh -g 4 -d scannet200 -c semseg-pt-v3m1-1-ppt-ft -n semseg-pt-v3m1-1-ppt-ft -w ${PTV3_PPT_WEIGHT_PATH}
+
+# Scratched S3DIS, S3DIS rely on RPE, also an example for disable flash attention
+sh scripts/train.sh -g 4 -d s3dis -c semseg-pt-v3m1-0-rpe -n semseg-pt-v3m1-0-rpe
+# PPT joint training (ScanNet + S3DIS + Structured3D) and evaluate in ScanNet
+sh scripts/train.sh -g 8 -d s3dis -c semseg-pt-v3m1-1-ppt-extreme -n semseg-pt-v3m1-1-ppt-extreme
+# S3DIS 6-fold cross validation
+# 1. The default configs are evaluated on Area_5, modify the "data.train.split", "data.val.split", and "data.test.split" to make the config evaluated on Area_1 ~ Area_6 respectively.
+# 2. Train and evaluate the model on each split of areas and gather result files located in "exp/s3dis/EXP_NAME/result/Area_x.pth" in one single folder, noted as RECORD_FOLDER.
+# 3. Run the following script to get S3DIS 6-fold cross validation performance:
+export PYTHONPATH=./
+python tools/test_s3dis_6fold.py --record_root ${RECORD_FOLDER}
+
+# Scratched nuScenes
+sh scripts/train.sh -g 4 -d nuscenes -c semseg-pt-v3m1-0-base -n semseg-pt-v3m1-0-base
+# Scratched Waymo
+sh scripts/train.sh -g 4 -d waymo -c semseg-pt-v3m1-0-base -n semseg-pt-v3m1-0-base
+
+# More configs and exp records for PTv3 will be available soon.
 ```
+
+Indoor semantic segmentation
+
+| Model | Benchmark | Additional Data | Num GPUs | Val mIoU | Config | Tensorboard | Exp Record |
+| :---: | :---: |:---------------:| :---: | :---: | :---: | :---: | :---: |
+| PTv3 | ScanNet |     &cross;     | 4 | 77.6% | [link](https://github.com/Pointcept/Pointcept/blob/main/configs/scannet/semseg-pt-v3m1-0-base.py) | [link](https://huggingface.co/Pointcept/PointTransformerV3/tensorboard) | [link](https://huggingface.co/Pointcept/PointTransformerV3/tree/main/scannet-semseg-pt-v3m1-0-base) |
+| PTv3 + PPT | ScanNet |     &check;     | 8 | 78.5% | [link](https://github.com/Pointcept/Pointcept/blob/main/configs/scannet/semseg-pt-v3m1-1-ppt-extreme.py) | [link](https://huggingface.co/Pointcept/PointTransformerV3/tensorboard) | [link](https://huggingface.co/Pointcept/PointTransformerV3/tree/main/scannet-semseg-pt-v3m1-1-ppt-extreme) |
+| PTv3 | ScanNet200 |     &cross;     | 4 | 35.3% | [link](https://github.com/Pointcept/Pointcept/blob/main/configs/scannet200/semseg-pt-v3m1-0-base.py) | [link](https://huggingface.co/Pointcept/PointTransformerV3/tensorboard) |[link](https://huggingface.co/Pointcept/PointTransformerV3/tree/main/scannet200-semseg-pt-v3m1-0-base)|
+| PTv3 + PPT | ScanNet200 | &check; (f.t.)  | 4 |  |  |  |  |
+| PTv3 | S3DIS (Area5) |     &cross;     | 4 | 73.6% | [link](https://github.com/Pointcept/Pointcept/blob/main/configs/s3dis/semseg-pt-v3m1-0-rpe.py) | [link](https://huggingface.co/Pointcept/PointTransformerV3/tensorboard) | [link](https://huggingface.co/Pointcept/PointTransformerV3/tree/main/s3dis-semseg-pt-v3m1-0-rpe) |
+| PTv3 + PPT | S3DIS (Area5) |     &check;     | 8 | 75.4% | [link](https://github.com/Pointcept/Pointcept/blob/main/configs/s3dis/semseg-pt-v3m1-1-ppt-extreme.py) | [link](https://huggingface.co/Pointcept/PointTransformerV3/tensorboard) | [link](https://huggingface.co/Pointcept/PointTransformerV3/tree/main/s3dis-semseg-pt-v3m1-1-ppt-extreme) |
+
+Outdoor semantic segmentation
+
+| Model | Benchmark | Additional Data | Num GPUs | Val mIoU | Config | Tensorboard | Exp Record |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| PTv3 | nuScenes | &cross; | 4 | 80.3 | [link](https://github.com/Pointcept/Pointcept/blob/main/configs/nuscenes/semseg-pt-v3m1-0-base.py) | [link](https://huggingface.co/Pointcept/PointTransformerV3/tensorboard)|[link](https://huggingface.co/Pointcept/PointTransformerV3/tree/main/nuscenes-semseg-pt-v3m1-0-base) |
+| PTv3 + PPT | nuScenes | &check; | 8 | | | | |
+| PTv3 | SemanticKITTI | &cross; | 4 | | | | |
+| PTv3 + PPT | SemanticKITTI | &check; | 8 | | | | |
+| PTv3 | Waymo | &cross; | 4 | 71.2 | [link](https://github.com/Pointcept/Pointcept/blob/main/configs/waymo/semseg-pt-v3m1-0-base.py) | [link](https://huggingface.co/Pointcept/PointTransformerV3/tensorboard) | [link](https://huggingface.co/Pointcept/PointTransformerV3/tree/main/waymo-semseg-pt-v3m1-0-base) (log only) |
+| PTv3 + PPT | Waymo | &check; | 8 | | | | |
+* Model weights trained with Waymo Open Dataset cannot be released due to the regulations. 
+
 
 - **PTv2 mode2**
 

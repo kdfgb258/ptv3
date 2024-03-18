@@ -188,6 +188,7 @@ class SerializedAttention(PointModule):
         qkv = self.qkv(point.feat)[order]
 
         if not self.enable_flash:
+            # dot-product attention
             # encode and reshape qkv: (N', K, 3, H, C') => (3, N', H, K, C')
             q, k, v = (
                 qkv.reshape(-1, K, 3, H, C // H).permute(2, 0, 3, 1, 4).unbind(dim=0)
@@ -702,6 +703,7 @@ class SerializedPooling(PointModule):
         # index pointer for sorted point, for torch_scatter.segment_csr
         idx_ptr = torch.cat([counts.new_zeros(1), torch.cumsum(counts, dim=0)])
         # head_indices of each cluster, for reduce attr e.g. code, batch
+        # ignore the end position
         head_indices = indices[idx_ptr[:-1]]
         # generate down code, order, inverse
         code = code[:, head_indices]
