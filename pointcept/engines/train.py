@@ -185,67 +185,21 @@ class Trainer(TrainerBase):
         with torch.cuda.amp.autocast(enabled=self.cfg.enable_amp):
             output_dict = self.model(input_dict)
             loss = output_dict["loss"]
-            loss = loss / self.target_steps
-
-        # self.optimizer.zero_grad()
+        self.optimizer.zero_grad()
         if self.cfg.enable_amp:
             self.scaler.scale(loss).backward()
-            if (self.accum_steps + 1) % self.target_steps == 0:
-                self.scaler.step(self.optimizer)
+            self.scaler.step(self.optimizer)
 
-                # When enable amp, optimizer.step call are skipped if the loss scaling factor is too large.
-                # Fix torch warning scheduler step before optimizer step.
-                scaler = self.scaler.get_scale()
-                self.scaler.update()
-                if scaler <= self.scaler.get_scale():
-                    self.scheduler.step()
-                self.optimizer.zero_grad()
+            # When enable amp, optimizer.step call are skipped if the loss scaling factor is too large.
+            # Fix torch warning scheduler step before optimizer step.
+            scaler = self.scaler.get_scale()
+            self.scaler.update()
+            if scaler <= self.scaler.get_scale():
+                self.scheduler.step()
         else:
             loss.backward()
-
-            # # get the parameters of the ParallelBlockV1
-            # param_list= []
-            # for n, p in self.model.named_parameters():
-            #     if n.startswith('module.backbone.enc.enc3.parallelblock0') and p.grad is not None:
-            #         # record grad norm(list)
-            #         param_list.append(p.grad.norm().item() ** 2)
-            #
-            # applied_grad_norm = sum(param_list) ** 0.5
-            # self.logger.info(f'Applied grad norm: {applied_grad_norm}')
-
-            # # gradient clip
-            # grad_norm=torch.nn.utils.clip_grad_norm_(
-            #     parameters=self.model.parameters(),
-            #     max_norm=1.0,
-            #     norm_type=2
-            # )
-            # if grad_norm is not None and torch.isfinite(grad_norm):
-            #     self.optimizer.step()
-            # else:
-            #     print("infinite gradient.")
-            #     # self.optimizer.step()
-
-            # accumulate batch size
-            if (self.accum_steps + 1) % self.target_steps == 0:
-                # gradient clip
-                grad_norm=torch.nn.utils.clip_grad_norm_(parameters=self.model.parameters(), max_norm=1.0, norm_type=2)
-                if grad_norm is not None and torch.isfinite(grad_norm):
-                    # update after accumulate batch
-                    self.optimizer.step()
-                else:
-                    print("infinite gradient.")
-
-                self.scheduler.step()
-                self.optimizer.zero_grad()
-
-            # self.optimizer.step()
-            # self.scheduler.step()
-
-        self.accum_steps += 1
-        if self.accum_steps % self.target_steps == 0:
-            self.accum_steps = 0
-
-
+            self.optimizer.step()
+            self.scheduler.step()
         if self.cfg.empty_cache:
             torch.cuda.empty_cache()
         self.comm_info["model_output_dict"] = output_dict
